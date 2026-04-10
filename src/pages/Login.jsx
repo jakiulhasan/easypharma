@@ -1,13 +1,27 @@
 import React, { use } from "react";
-import GoogleLoginButton from "../auth/GoogleLoginButton";
-import EmailLoginForm from "../auth/EmailLoginForm";
-import AuthFooter from "../auth/AuthFooter";
+
 import { AuthContext } from "../context/auth/AuthContext";
+import GoogleLoginButton from "../components/auth/GoogleLoginButton";
+import EmailLoginForm from "../components/auth/EmailLoginForm";
+import AuthFooter from "../components/auth/AuthFooter";
+import { Navigate } from "react-router";
+import Loading from "../components/Loading/Loading";
 
 const Login = () => {
-  const { user } = use(AuthContext);
+  const { user, loading } = use(AuthContext);
+  
+  if (loading) {
+    return (
+      <div>
+        <Loading></Loading>
+      </div>
+    );
+  }
 
-  console.log("user is :", user);
+  if (user) {
+    return <Navigate to="/dashboard" />;
+  }
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-white">
       <div className="backdrop-blur-xl bg-white/30 border border-gray-200 shadow-2xl rounded-2xl p-8 w-full max-w-md">

@@ -1,7 +1,24 @@
-import React from "react";
+import React, { use } from "react";
 import RegisterForm from "../components/auth/RegisterForm";
+import { AuthContext } from "../context/auth/AuthContext";
+import Loading from "../components/Loading/Loading";
+import { Navigate } from "react-router";
 
 const Register = () => {
+  const { user, loading } = use(AuthContext);
+
+  if (loading) {
+    return (
+      <div>
+        <Loading></Loading>
+      </div>
+    );
+  }
+
+  if (user) {
+    return <Navigate to="/dashboard" />;
+  }
+
   return (
     <div className="relative min-h-screen flex items-center justify-center bg-[#f8fafc] overflow-hidden">
       {/* Background Decorative Elements */}
