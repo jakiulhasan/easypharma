@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Plus, Trash2, Send, Calendar } from "lucide-react";
+import { Plus, Trash2, Send } from "lucide-react";
 
 const AddMedicineForm = () => {
   const [medicines, setMedicines] = useState([
@@ -11,13 +11,15 @@ const AddMedicineForm = () => {
       quantity: 0,
       buyPrice: 0,
       sellPrice: 0,
+      location: "",
       totalBuy: 0,
     },
   ]);
+
   const [commission, setCommission] = useState(0);
   const [totals, setTotals] = useState({ subTotal: 0, grandTotal: 0 });
 
-  // ক্যালকুলেশন লজিক
+  // Calculation logic
   useEffect(() => {
     const subTotal = medicines.reduce(
       (acc, curr) => acc + curr.quantity * curr.buyPrice,
@@ -31,7 +33,7 @@ const AddMedicineForm = () => {
     const updatedMedicines = [...medicines];
     updatedMedicines[index][field] = value;
 
-    // অটোমেটিক টোটাল বাই ক্যালকুলেশন
+    // Auto total calculation
     if (field === "quantity" || field === "buyPrice") {
       updatedMedicines[index].totalBuy =
         updatedMedicines[index].quantity * updatedMedicines[index].buyPrice;
@@ -51,6 +53,7 @@ const AddMedicineForm = () => {
         quantity: 0,
         buyPrice: 0,
         sellPrice: 0,
+        location: "",
         totalBuy: 0,
       },
     ]);
@@ -69,9 +72,9 @@ const AddMedicineForm = () => {
   };
 
   return (
-    <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 max-w-6xl mx-auto">
+    <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
       <h2 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
-        <Plus className="bg-green-600 text-white rounded-full p-1" size={24} />{" "}
+        <Plus className="bg-green-600 text-white rounded-full p-1" size={24} />
         Add New Stock
       </h2>
 
@@ -87,10 +90,12 @@ const AddMedicineForm = () => {
                 <th className="pb-3 px-2 w-24">Qty</th>
                 <th className="pb-3 px-2">Buy Price</th>
                 <th className="pb-3 px-2">Sell Price</th>
+                <th className="pb-3 px-2">Location</th>
                 <th className="pb-3 px-2">Total Buy</th>
                 <th className="pb-3 px-2 text-center">Action</th>
               </tr>
             </thead>
+
             <tbody className="divide-y divide-gray-50">
               {medicines.map((med, index) => (
                 <tr
@@ -100,6 +105,7 @@ const AddMedicineForm = () => {
                   <td className="py-4 px-2 text-sm font-bold text-gray-500">
                     {index + 1 < 10 ? `0${index + 1}` : index + 1}
                   </td>
+
                   <td className="py-2 px-2">
                     <input
                       type="text"
@@ -112,6 +118,7 @@ const AddMedicineForm = () => {
                       required
                     />
                   </td>
+
                   <td className="py-2 px-2">
                     <input
                       type="text"
@@ -123,6 +130,7 @@ const AddMedicineForm = () => {
                       placeholder="MED101"
                     />
                   </td>
+
                   <td className="py-2 px-2">
                     <input
                       type="date"
@@ -134,6 +142,7 @@ const AddMedicineForm = () => {
                       required
                     />
                   </td>
+
                   <td className="py-2 px-2">
                     <input
                       type="number"
@@ -149,6 +158,7 @@ const AddMedicineForm = () => {
                       min="0"
                     />
                   </td>
+
                   <td className="py-2 px-2">
                     <input
                       type="number"
@@ -164,6 +174,7 @@ const AddMedicineForm = () => {
                       min="0"
                     />
                   </td>
+
                   <td className="py-2 px-2">
                     <input
                       type="number"
@@ -179,6 +190,19 @@ const AddMedicineForm = () => {
                       min="0"
                     />
                   </td>
+
+                  <td className="py-2 px-2">
+                    <input
+                      type="text"
+                      value={med.location}
+                      onChange={(e) =>
+                        handleInputChange(index, "location", e.target.value)
+                      }
+                      className="w-full p-2 border border-gray-200 rounded-lg text-sm focus:ring-2 ring-green-500/20 outline-none"
+                      placeholder="A5"
+                    />
+                  </td>
+
                   <td className="py-2 px-2">
                     <input
                       type="text"
@@ -187,6 +211,7 @@ const AddMedicineForm = () => {
                       className="w-full p-2 bg-gray-50 border border-gray-100 rounded-lg text-sm font-bold text-gray-600 outline-none"
                     />
                   </td>
+
                   <td className="py-2 px-2 text-center">
                     <button
                       type="button"
@@ -202,7 +227,6 @@ const AddMedicineForm = () => {
           </table>
         </div>
 
-        {/* Add More Button */}
         <button
           type="button"
           onClick={addMoreRow}
@@ -211,7 +235,7 @@ const AddMedicineForm = () => {
           <Plus size={18} /> Add More
         </button>
 
-        {/* Calculation Section */}
+        {/* Calculation */}
         <div className="flex flex-col items-end gap-3 border-t border-gray-100 pt-6">
           <div className="flex items-center gap-4">
             <label className="text-sm font-bold text-gray-500">Sub Total</label>
@@ -222,6 +246,7 @@ const AddMedicineForm = () => {
               className="w-40 p-2 bg-gray-50 border border-gray-200 rounded-xl text-right font-bold"
             />
           </div>
+
           <div className="flex items-center gap-4">
             <label className="text-sm font-bold text-gray-500">
               Commission (-)
@@ -233,6 +258,7 @@ const AddMedicineForm = () => {
               className="w-40 p-2 border border-green-200 rounded-xl text-right font-bold text-green-700 outline-none focus:ring-2 ring-green-500/20"
             />
           </div>
+
           <div className="flex items-center gap-4">
             <label className="text-xl font-black text-gray-800">
               Grand Total
@@ -246,7 +272,6 @@ const AddMedicineForm = () => {
           </div>
         </div>
 
-        {/* Submit Button */}
         <div className="mt-10 flex justify-center">
           <button
             type="submit"
