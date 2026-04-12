@@ -9,7 +9,7 @@ import Loading from "../components/Loading/Loading";
 
 const Login = () => {
   const { user, loading } = use(AuthContext);
-  
+
   if (loading) {
     return (
       <div>
