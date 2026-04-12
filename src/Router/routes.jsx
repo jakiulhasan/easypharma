@@ -5,6 +5,7 @@ import Homepage from "../pages/Homepage";
 import Login from "../pages/Login";
 import Register from "../pages/Register";
 import Dashboard from "../pages/Dashboard";
+import Overview from "../components/Dashboard/Overview";
 
 const routes = createBrowserRouter([
   {
@@ -26,6 +27,12 @@ const routes = createBrowserRouter([
       {
         path: "/dashboard",
         Component: Dashboard,
+        children: [
+          {
+            index: true,
+            Component: Overview,
+          },
+        ],
       },
     ],
   },
