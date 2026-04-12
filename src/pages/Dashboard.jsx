@@ -6,6 +6,7 @@ import {
   Heart,
   AlertTriangle,
   Settings,
+  Plus,
 } from "lucide-react";
 
 import { AuthContext } from "../context/auth/AuthContext";
@@ -37,6 +38,7 @@ const Dashboard = () => {
           </p>
 
           <NavLink
+            to="overview"
             className={
               "flex items-center gap-3 px-4 py-3 cursor-pointer transition-all rounded-lg mb-1 text-green-100 hover:bg-green-800/50"
             }
@@ -45,7 +47,16 @@ const Dashboard = () => {
             <LayoutDashboard></LayoutDashboard>Overview
           </NavLink>
           <NavLink
-            to="/sales"
+            to="/dashboard/add-medicine"
+            className={
+              "flex items-center gap-3 px-4 py-3 cursor-pointer transition-all rounded-lg mb-1 text-green-100 hover:bg-green-800/50"
+            }
+          >
+            {" "}
+            <Plus></Plus>Add Medicine
+          </NavLink>
+          <NavLink
+            to="/dashboard/sales"
             className={
               "flex items-center gap-3 px-4 py-3 cursor-pointer transition-all rounded-lg mb-1 text-green-100 hover:bg-green-800/50"
             }
@@ -82,7 +93,7 @@ const Dashboard = () => {
             Configuration
           </p>
           <NavLink
-            to="/expired"
+            to="/settins"
             className={
               "flex items-center gap-3 px-4 py-3 cursor-pointer transition-all rounded-lg mb-1 text-green-100 hover:bg-green-800/50"
             }

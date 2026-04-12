@@ -1,11 +1,13 @@
 import React from "react";
-import { createBrowserRouter } from "react-router";
+import { createBrowserRouter, Navigate } from "react-router";
 import MainLayout from "../layout/MainLayout";
 import Homepage from "../pages/Homepage";
 import Login from "../pages/Login";
 import Register from "../pages/Register";
 import Dashboard from "../pages/Dashboard";
 import Overview from "../components/Dashboard/Overview";
+import Sales from "../components/Dashboard/sales/Sales";
+import AddMedicine from "../components/Dashboard/Add-Medicine/AddMedicine";
 
 const routes = createBrowserRouter([
   {
@@ -30,7 +32,19 @@ const routes = createBrowserRouter([
         children: [
           {
             index: true,
+            element: <Navigate to="overview"></Navigate>,
+          },
+          {
+            path: "overview",
             Component: Overview,
+          },
+          {
+            path: "sales",
+            Component: Sales,
+          },
+          {
+            path: "add-medicine",
+            Component: AddMedicine,
           },
         ],
       },
