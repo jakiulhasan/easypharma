@@ -65,7 +65,7 @@ const Dashboard = () => {
             <ShoppingCart></ShoppingCart>Sales
           </NavLink>
           <NavLink
-            to="/inventory"
+            to="/dashboard/inventory"
             className={
               "flex items-center gap-3 px-4 py-3 cursor-pointer transition-all rounded-lg mb-1 text-green-100 hover:bg-green-800/50"
             }
@@ -73,7 +73,7 @@ const Dashboard = () => {
             <Pill></Pill>Inventory
           </NavLink>
           <NavLink
-            to="/wishlist"
+            to="/dashboard/wishlist"
             className={
               "flex items-center gap-3 px-4 py-3 cursor-pointer transition-all rounded-lg mb-1 text-green-100 hover:bg-green-800/50"
             }
@@ -81,19 +81,19 @@ const Dashboard = () => {
             <Heart></Heart>Wishlist
           </NavLink>
           <NavLink
-            to="/expired"
+            to="/dashboard/near-expired"
             className={
               "flex items-center gap-3 px-4 py-3 cursor-pointer transition-all rounded-lg mb-1 text-green-100 hover:bg-green-800/50"
             }
           >
             {" "}
-            <AlertTriangle></AlertTriangle>Expired
+            <AlertTriangle></AlertTriangle>Near Expired
           </NavLink>
           <p className="text-[10px] uppercase tracking-widest text-green-500 mt-8 mb-4 px-2 font-bold">
             Configuration
           </p>
           <NavLink
-            to="/settins"
+            to="/dashboard/settings"
             className={
               "flex items-center gap-3 px-4 py-3 cursor-pointer transition-all rounded-lg mb-1 text-green-100 hover:bg-green-800/50"
             }

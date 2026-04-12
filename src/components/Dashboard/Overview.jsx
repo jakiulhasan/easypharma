@@ -1,4 +1,4 @@
-import React, { use } from "react";
+import React from "react";
 import {
   PlusCircle,
   LogOut,
@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { AuthContext } from "../../context/auth/AuthContext";
 import Header from "../Header/Header";
+import { Link } from "react-router";
 
 const StatCard = ({ title, value, color, icon: Icon, subText }) => (
   <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 relative overflow-hidden flex flex-col justify-between h-32">
@@ -118,29 +119,38 @@ const Overview = () => {
             {/* Quick Actions */}
             <div className="grid grid-cols-3 gap-4">
               {/* Add Medicine */}
-              <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex flex-col items-center justify-center cursor-pointer hover:border-green-500 transition-all group">
+              <Link
+                to="/dashboard/sales"
+                className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex flex-col items-center justify-center cursor-pointer hover:border-green-500 transition-all group"
+              >
                 <div className="w-12 h-12 bg-green-50 text-green-600 rounded-full flex items-center justify-center mb-3 group-hover:bg-green-600 group-hover:text-white transition-all">
                   <PlusCircle size={24} />
                 </div>
                 <p className="font-bold text-sm">Add Medicine</p>
                 <p className="text-[10px] text-gray-400">Restock inventory</p>
-              </div>
+              </Link>
               {/* Sell Medicine */}
-              <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex flex-col items-center justify-center cursor-pointer hover:border-red-500 transition-all group">
+              <Link
+                to="/dashboard/sales"
+                className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex flex-col items-center justify-center cursor-pointer hover:border-red-500 transition-all group"
+              >
                 <div className="w-12 h-12 bg-red-50 text-red-600 rounded-full flex items-center justify-center mb-3 group-hover:bg-red-600 group-hover:text-white transition-all">
                   <MinusCircle size={24} />
                 </div>
                 <p className="font-bold text-sm">Sell Medicine</p>
                 <p className="text-[10px] text-gray-400">Manage Inventory</p>
-              </div>
+              </Link>
               {/* Wishlist */}
-              <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex flex-col items-center justify-center cursor-pointer hover:border-blue-500 transition-all group">
+              <Link
+                to="/dashboard/wishlist"
+                className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex flex-col items-center justify-center cursor-pointer hover:border-blue-500 transition-all group"
+              >
                 <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mb-3 group-hover:bg-blue-600 group-hover:text-white transition-all">
                   <Heart size={24} />
                 </div>
                 <p className="font-bold text-sm">View Wishlist</p>
                 <p className="text-[10px] text-gray-400">Customer requests</p>
-              </div>
+              </Link>
             </div>
 
             {/* Medicine Wishlist / Recent Activity Table */}
