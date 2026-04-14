@@ -29,9 +29,33 @@ const AddMedicineForm = () => {
   const [suggestions, setSuggestions] = useState({}); // { rowIndex: [] }
   const [isLoading, setIsLoading] = useState({}); // { rowIndex: boolean }
   const [activeSuggestionIndex, setActiveSuggestionIndex] = useState({}); // For keyboard navigation
+  const [showAddNewOption, setShowAddNewOption] = useState({}); // { rowIndex: boolean }
 
   const searchTimeoutRef = useRef({});
   const suggestionRefs = useRef({});
+
+  // Function to generate a unique 5-digit ID
+  const generateUniqueId = async () => {
+    try {
+      // Fetch all existing medicine IDs from the database
+      const response = await fetch(
+        `http://localhost:4242/api/medicines/all-ids`,
+      );
+      const existingIds = await response.json();
+
+      let newId;
+      do {
+        // Generate random 5-digit number (10000 to 99999)
+        newId = Math.floor(10000 + Math.random() * 90000).toString();
+      } while (existingIds.includes(newId));
+
+      return newId;
+    } catch (error) {
+      console.error("Error generating unique ID:", error);
+      // Fallback: generate without checking existing IDs
+      return Math.floor(10000 + Math.random() * 90000).toString();
+    }
+  };
 
   useEffect(() => {
     const subTotal = medicines.reduce(
@@ -47,6 +71,7 @@ const AddMedicineForm = () => {
   const searchMedicines = async (query, rowIndex) => {
     if (!query || query.length < 2) {
       setSuggestions((prev) => ({ ...prev, [rowIndex]: [] }));
+      setShowAddNewOption((prev) => ({ ...prev, [rowIndex]: false }));
       return;
     }
 
@@ -60,11 +85,73 @@ const AddMedicineForm = () => {
       const data = await response.json();
 
       setSuggestions((prev) => ({ ...prev, [rowIndex]: data }));
+
+      // Check if the typed name matches any existing medicine
+      const exactMatch = data.some(
+        (medicine) => medicine.name.toLowerCase() === query.toLowerCase(),
+      );
+
+      setShowAddNewOption((prev) => ({
+        ...prev,
+        [rowIndex]: !exactMatch && query.trim().length > 0,
+      }));
     } catch (error) {
       console.error("Search error:", error);
       setSuggestions((prev) => ({ ...prev, [rowIndex]: [] }));
+      setShowAddNewOption((prev) => ({ ...prev, [rowIndex]: true }));
     } finally {
       setIsLoading((prev) => ({ ...prev, [rowIndex]: false }));
+    }
+  };
+
+  // Add new medicine to database
+  const addNewMedicine = async (index, medicineName) => {
+    setIsLoading((prev) => ({ ...prev, [index]: true }));
+
+    try {
+      const uniqueId = await generateUniqueId();
+
+      // Create new medicine object
+      const newMedicine = {
+        id: uniqueId,
+        name: medicineName,
+        type: medicines[index].type || "Tablet",
+        // Add other default fields as needed
+      };
+
+      // API call to save the new medicine to database
+      const response = await fetch(`http://localhost:4242/api/medicines`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(newMedicine),
+      });
+
+      if (response.ok) {
+        const savedMedicine = await response.json();
+
+        // Update the form with the new medicine
+        handleInputChange(index, "name", savedMedicine.name);
+        handleInputChange(index, "code", savedMedicine.id);
+
+        // Clear suggestions
+        setSuggestions((prev) => ({ ...prev, [index]: [] }));
+        setShowAddNewOption((prev) => ({ ...prev, [index]: false }));
+        setSearchQuery((prev) => ({ ...prev, [index]: savedMedicine.name }));
+
+        // Show success message (optional)
+        alert(
+          `New medicine "${savedMedicine.name}" added with ID: ${savedMedicine.id}`,
+        );
+      } else {
+        throw new Error("Failed to save medicine");
+      }
+    } catch (error) {
+      console.error("Error adding new medicine:", error);
+      alert("Failed to add new medicine. Please try again.");
+    } finally {
+      setIsLoading((prev) => ({ ...prev, [index]: false }));
     }
   };
 
@@ -96,6 +183,7 @@ const AddMedicineForm = () => {
 
     // Clear suggestions and search query
     setSuggestions((prev) => ({ ...prev, [index]: [] }));
+    setShowAddNewOption((prev) => ({ ...prev, [index]: false }));
     setSearchQuery((prev) => ({ ...prev, [index]: medicine.name }));
     setActiveSuggestionIndex((prev) => ({ ...prev, [index]: -1 }));
   };
@@ -103,14 +191,17 @@ const AddMedicineForm = () => {
   // Handle keyboard navigation
   const handleKeyDown = (e, index) => {
     const suggestionList = suggestions[index] || [];
+    const showAddNew = showAddNewOption[index];
 
-    if (suggestionList.length === 0) return;
+    const totalOptions = suggestionList.length + (showAddNew ? 1 : 0);
+
+    if (totalOptions === 0) return;
 
     if (e.key === "ArrowDown") {
       e.preventDefault();
       setActiveSuggestionIndex((prev) => ({
         ...prev,
-        [index]: Math.min((prev[index] || -1) + 1, suggestionList.length - 1),
+        [index]: Math.min((prev[index] || -1) + 1, totalOptions - 1),
       }));
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
@@ -120,9 +211,19 @@ const AddMedicineForm = () => {
       }));
     } else if (e.key === "Enter" && activeSuggestionIndex[index] >= 0) {
       e.preventDefault();
-      selectMedicine(index, suggestionList[activeSuggestionIndex[index]]);
+      if (
+        showAddNew &&
+        activeSuggestionIndex[index] === suggestionList.length
+      ) {
+        // "Add new" option is selected
+        addNewMedicine(index, searchQuery[index]);
+      } else if (activeSuggestionIndex[index] < suggestionList.length) {
+        // Regular medicine is selected
+        selectMedicine(index, suggestionList[activeSuggestionIndex[index]]);
+      }
     } else if (e.key === "Escape") {
       setSuggestions((prev) => ({ ...prev, [index]: [] }));
+      setShowAddNewOption((prev) => ({ ...prev, [index]: false }));
       setActiveSuggestionIndex((prev) => ({ ...prev, [index]: -1 }));
     }
   };
@@ -177,6 +278,11 @@ const AddMedicineForm = () => {
         delete newState[index];
         return newState;
       });
+      setShowAddNewOption((prev) => {
+        const newState = { ...prev };
+        delete newState[index];
+        return newState;
+      });
     }
   };
 
@@ -189,6 +295,7 @@ const AddMedicineForm = () => {
           !suggestionRefs.current[index].contains(event.target)
         ) {
           setSuggestions((prev) => ({ ...prev, [index]: [] }));
+          setShowAddNewOption((prev) => ({ ...prev, [index]: false }));
         }
       });
     };
@@ -283,16 +390,18 @@ const AddMedicineForm = () => {
                       </div>
 
                       {/* SUGGESTIONS DROPDOWN - HIGH Z-INDEX */}
-                      {suggestions[index] && suggestions[index].length > 0 && (
+                      {(suggestions[index]?.length > 0 ||
+                        showAddNewOption[index]) && (
                         <div
                           className="absolute z-[9999] w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-2xl max-h-60 overflow-y-auto"
                           style={{ zIndex: 9999 }}
                         >
-                          {suggestions[index].map((medicine, sIndex) => (
+                          {/* Existing medicine suggestions */}
+                          {suggestions[index]?.map((medicine, sIndex) => (
                             <div
                               key={medicine._id}
                               onClick={() => selectMedicine(index, medicine)}
-                              className={`px-4 py-2.5 cursor-pointer transition-colors border-b border-gray-100 last:border-0 ${
+                              className={`px-4 py-2.5 cursor-pointer transition-colors border-b border-gray-100 ${
                                 activeSuggestionIndex[index] === sIndex
                                   ? "bg-green-50 text-green-700"
                                   : "hover:bg-gray-50"
@@ -306,6 +415,33 @@ const AddMedicineForm = () => {
                               </div>
                             </div>
                           ))}
+
+                          {/* Add new medicine option */}
+                          {showAddNewOption[index] && (
+                            <div
+                              onClick={() =>
+                                addNewMedicine(index, searchQuery[index])
+                              }
+                              className={`px-4 py-2.5 cursor-pointer transition-colors border-b border-gray-100 last:border-0 ${
+                                activeSuggestionIndex[index] ===
+                                (suggestions[index]?.length || 0)
+                                  ? "bg-blue-50 text-blue-700"
+                                  : "hover:bg-blue-50 text-blue-600"
+                              }`}
+                            >
+                              <div className="flex items-center gap-2">
+                                <Plus size={16} />
+                                <div>
+                                  <div className="font-medium text-sm">
+                                    Add "{searchQuery[index]}" as new medicine
+                                  </div>
+                                  <div className="text-xs text-gray-500">
+                                    Will generate a unique 5-digit ID
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
