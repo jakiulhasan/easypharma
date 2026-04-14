@@ -1,10 +1,15 @@
-import React, { useState, useEffect } from "react";
-import { Plus, Trash2, Send } from "lucide-react";
+import React, { useState, useEffect, useContext } from "react";
+import { Plus, Trash2, Send, MapPin } from "lucide-react";
+import { AuthContext } from "../../../context/auth/AuthContext";
 
 const AddMedicineForm = () => {
+  const { user } = useContext(AuthContext);
+
   const [medicines, setMedicines] = useState([
     {
       id: 1,
+      user: user?.email || "",
+      type: "Tablet",
       name: "",
       code: "",
       expiry: "",
@@ -19,25 +24,29 @@ const AddMedicineForm = () => {
   const [commission, setCommission] = useState(0);
   const [totals, setTotals] = useState({ subTotal: 0, grandTotal: 0 });
 
-  // Calculation logic
   useEffect(() => {
     const subTotal = medicines.reduce(
       (acc, curr) => acc + curr.quantity * curr.buyPrice,
       0,
     );
     const grandTotal = subTotal - commission;
+
     setTotals({ subTotal, grandTotal });
   }, [medicines, commission]);
 
   const handleInputChange = (index, field, value) => {
-    const updatedMedicines = [...medicines];
-    updatedMedicines[index][field] = value;
+    const updatedMedicines = medicines.map((item, i) => {
+      if (i !== index) return item;
 
-    // Auto total calculation
-    if (field === "quantity" || field === "buyPrice") {
-      updatedMedicines[index].totalBuy =
-        updatedMedicines[index].quantity * updatedMedicines[index].buyPrice;
-    }
+      const updatedItem = { ...item, [field]: value };
+
+      if (field === "quantity" || field === "buyPrice") {
+        updatedItem.totalBuy =
+          (updatedItem.quantity || 0) * (updatedItem.buyPrice || 0);
+      }
+
+      return updatedItem;
+    });
 
     setMedicines(updatedMedicines);
   };
@@ -47,6 +56,8 @@ const AddMedicineForm = () => {
       ...medicines,
       {
         id: Date.now(),
+        user: user?.email || "",
+        type: "Tablet",
         name: "",
         code: "",
         expiry: "",
@@ -65,85 +76,96 @@ const AddMedicineForm = () => {
     }
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    console.log("Submitted Data:", { medicines, totals, commission });
-    alert("Medicine Data Submitted Successfully!");
-  };
-
   return (
-    <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-      <h2 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
-        <Plus className="bg-green-600 text-white rounded-full p-1" size={24} />
-        Add New Stock
+    <div className="bg-white p-6 rounded-3xl shadow-xl border border-gray-100 mx-auto my-10">
+      <h2 className="text-2xl font-black text-gray-800 mb-8 flex items-center gap-1">
+        <Plus className="bg-[#053528] text-white rounded-lg p-1.5" size={32} />
+        Update Stock Inventory
       </h2>
 
-      <form onSubmit={handleSubmit}>
-        <div className="overflow-x-auto">
-          <table className="w-full mb-4">
-            <thead>
-              <tr className="text-left text-xs font-bold text-gray-400 uppercase tracking-wider border-b border-gray-100">
-                <th className="pb-3 px-2">Sl</th>
-                <th className="pb-3 px-2">Medicine Name</th>
-                <th className="pb-3 px-2">Code</th>
-                <th className="pb-3 px-2">Expiry</th>
-                <th className="pb-3 px-2 w-24">Qty</th>
-                <th className="pb-3 px-2">Buy Price</th>
-                <th className="pb-3 px-2">Sell Price</th>
-                <th className="pb-3 px-2">Location</th>
-                <th className="pb-3 px-2">Total Buy</th>
-                <th className="pb-3 px-2 text-center">Action</th>
+      <form onSubmit={(e) => e.preventDefault()}>
+        <div className="overflow-x-auto rounded-xl border border-gray-100">
+          <table className="w-full text-left border-collapse">
+            <thead className="bg-gray-50">
+              <tr className="text-[11px] font-black text-gray-500 uppercase tracking-widest border-b border-gray-100">
+                <th className="p-4 w-12 text-center">SL</th>
+                <th className="p-4 w-28">Type</th>
+                <th className="p-4 min-w-[150px]">Medicine Name</th>
+                <th className="p-4 w-28">Code</th>
+                <th className="p-4 w-36">Expiry</th>
+                <th className="p-4 w-20 text-center">QTYY</th>
+                <th className="p-4 w-28 text-right">Buy (৳)</th>
+                <th className="p-4 w-28 text-right">Sell (৳)</th>
+                <th className="p-4 w-32">Location</th>
+                <th className="p-4 w-32 text-right">Total Buy</th>
+                <th className="p-4 w-16 text-center">Action</th>
               </tr>
             </thead>
 
             <tbody className="divide-y divide-gray-50">
               {medicines.map((med, index) => (
-                <tr
-                  key={med.id}
-                  className="hover:bg-gray-50/50 transition-colors"
-                >
-                  <td className="py-4 px-2 text-sm font-bold text-gray-500">
-                    {index + 1 < 10 ? `0${index + 1}` : index + 1}
+                <tr key={med.id} className="hover:bg-gray-50/50 transition-all">
+                  {/* SL */}
+                  <td className="p-1 text-center text-xs font-bold text-gray-400">
+                    {index + 1}
                   </td>
 
-                  <td className="py-2 px-2">
+                  {/* TYPE */}
+                  <td className="p-1">
+                    <select
+                      value={med.type}
+                      onChange={(e) =>
+                        handleInputChange(index, "type", e.target.value)
+                      }
+                      className="w-full p-2.5 border border-gray-200 rounded-xl text-sm outline-none focus:border-green-500"
+                    >
+                      <option value="Tablet">Tablet</option>
+                      <option value="Syrup">Syrup</option>
+                      <option value="Injection">Injection</option>
+                      <option value="Insulin">Insulin</option>
+                    </select>
+                  </td>
+
+                  {/* NAME */}
+                  <td className="p-1">
                     <input
                       type="text"
                       value={med.name}
                       onChange={(e) =>
                         handleInputChange(index, "name", e.target.value)
                       }
-                      className="w-full p-2 border border-gray-200 rounded-lg text-sm focus:ring-2 ring-green-500/20 outline-none"
-                      placeholder="Napa..."
-                      required
+                      className="w-full p-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 ring-green-500/20 outline-none"
+                      placeholder="Enter Name..."
                     />
                   </td>
 
-                  <td className="py-2 px-2">
+                  {/* CODE */}
+                  <td className="p-1">
                     <input
                       type="text"
                       value={med.code}
                       onChange={(e) =>
                         handleInputChange(index, "code", e.target.value)
                       }
-                      className="w-full p-2 border border-gray-200 rounded-lg text-sm focus:ring-2 ring-green-500/20 outline-none"
-                      placeholder="MED101"
+                      className="w-full p-2.5 border border-gray-200 rounded-xl text-sm outline-none focus:border-green-500"
+                      placeholder="Code"
                     />
                   </td>
 
-                  <td className="py-2 px-2">
+                  {/* EXPIRY */}
+                  <td className="p-1">
                     <input
                       type="date"
                       value={med.expiry}
                       onChange={(e) =>
                         handleInputChange(index, "expiry", e.target.value)
                       }
-                      className="w-full p-2 border border-gray-200 rounded-lg text-sm focus:ring-2 ring-green-500/20 outline-none"
-                      required
+                      className="w-full p-2 border border-gray-200 rounded-xl text-xs outline-none"
                     />
                   </td>
 
-                  <td className="py-2 px-2">
+                  {/* QUANTITY */}
+                  <td className="p-1">
                     <input
                       type="number"
                       value={med.quantity}
@@ -154,12 +176,12 @@ const AddMedicineForm = () => {
                           parseInt(e.target.value) || 0,
                         )
                       }
-                      className="w-full p-2 border border-gray-200 rounded-lg text-sm focus:ring-2 ring-green-500/20 outline-none"
-                      min="0"
+                      className="w-full p-2.5 border border-gray-200 rounded-xl text-sm font-bold text-center outline-none"
                     />
                   </td>
 
-                  <td className="py-2 px-2">
+                  {/* BUY */}
+                  <td className="p-1">
                     <input
                       type="number"
                       value={med.buyPrice}
@@ -170,12 +192,12 @@ const AddMedicineForm = () => {
                           parseFloat(e.target.value) || 0,
                         )
                       }
-                      className="w-full p-2 border border-gray-200 rounded-lg text-sm focus:ring-2 ring-green-500/20 outline-none"
-                      min="0"
+                      className="w-full p-2.5 border border-gray-200 rounded-xl text-sm text-right outline-none"
                     />
                   </td>
 
-                  <td className="py-2 px-2">
+                  {/* SELL */}
+                  <td className="p-1">
                     <input
                       type="number"
                       value={med.sellPrice}
@@ -186,37 +208,37 @@ const AddMedicineForm = () => {
                           parseFloat(e.target.value) || 0,
                         )
                       }
-                      className="w-full p-2 border border-gray-200 rounded-lg text-sm focus:ring-2 ring-green-500/20 outline-none"
-                      min="0"
+                      className="w-full p-2.5 border border-gray-200 rounded-xl text-sm text-right outline-none"
                     />
                   </td>
 
-                  <td className="py-2 px-2">
-                    <input
-                      type="text"
-                      value={med.location}
-                      onChange={(e) =>
-                        handleInputChange(index, "location", e.target.value)
-                      }
-                      className="w-full p-2 border border-gray-200 rounded-lg text-sm focus:ring-2 ring-green-500/20 outline-none"
-                      placeholder="A5"
-                    />
+                  {/* LOCATION */}
+                  <td className="p-1">
+                    <div className="flex items-center gap-1.5 bg-white px-2 py-2.5 rounded-lg border border-gray-100">
+                      <MapPin size={14} className="text-gray-400" />
+                      <input
+                        type="text"
+                        value={med.location}
+                        onChange={(e) =>
+                          handleInputChange(index, "location", e.target.value)
+                        }
+                        className="w-full bg-transparent text-xs font-semibold outline-none"
+                        placeholder="A1 / B2"
+                      />
+                    </div>
                   </td>
 
-                  <td className="py-2 px-2">
-                    <input
-                      type="text"
-                      value={med.totalBuy.toFixed(2)}
-                      readOnly
-                      className="w-full p-2 bg-gray-50 border border-gray-100 rounded-lg text-sm font-bold text-gray-600 outline-none"
-                    />
+                  {/* TOTAL */}
+                  <td className="p-1 text-right font-black">
+                    ৳ {med.totalBuy.toLocaleString()}
                   </td>
 
-                  <td className="py-2 px-2 text-center">
+                  {/* ACTION */}
+                  <td className="p-1 text-center">
                     <button
                       type="button"
                       onClick={() => removeRow(index)}
-                      className="text-red-400 hover:text-red-600 p-2"
+                      className="text-gray-300 hover:text-red-500"
                     >
                       <Trash2 size={18} />
                     </button>
@@ -227,57 +249,48 @@ const AddMedicineForm = () => {
           </table>
         </div>
 
-        <button
-          type="button"
-          onClick={addMoreRow}
-          className="flex items-center gap-2 px-4 py-2 bg-green-50 text-green-700 rounded-xl font-bold text-sm hover:bg-green-100 transition-all border border-green-200 mb-10"
-        >
-          <Plus size={18} /> Add More
-        </button>
-
-        {/* Calculation */}
-        <div className="flex flex-col items-end gap-3 border-t border-gray-100 pt-6">
-          <div className="flex items-center gap-4">
-            <label className="text-sm font-bold text-gray-500">Sub Total</label>
-            <input
-              type="text"
-              value={totals.subTotal.toFixed(2)}
-              readOnly
-              className="w-40 p-2 bg-gray-50 border border-gray-200 rounded-xl text-right font-bold"
-            />
+        {/* FOOTER */}
+        <div className="mt-8 flex justify-between">
+          <div>
+            <button
+              type="button"
+              onClick={addMoreRow}
+              className="flex items-center gap-2 px-6 py-3 bg-green-50 text-green-700 rounded-2xl font-bold cursor-pointer"
+            >
+              <Plus size={20} /> Add New Medicine
+            </button>
           </div>
 
-          <div className="flex items-center gap-4">
-            <label className="text-sm font-bold text-gray-500">
-              Commission (-)
-            </label>
-            <input
-              type="number"
-              value={commission}
-              onChange={(e) => setCommission(parseFloat(e.target.value) || 0)}
-              className="w-40 p-2 border border-green-200 rounded-xl text-right font-bold text-green-700 outline-none focus:ring-2 ring-green-500/20"
-            />
-          </div>
+          <div className="w-96 p-6 bg-gray-50 rounded-3xl space-y-3">
+            <div className="flex justify-between">
+              <span>Sub Total</span>
+              <span>৳ {totals.subTotal.toFixed(2)}</span>
+            </div>
 
-          <div className="flex items-center gap-4">
-            <label className="text-xl font-black text-gray-800">
-              Grand Total
-            </label>
-            <input
-              type="text"
-              value={totals.grandTotal.toFixed(2)}
-              readOnly
-              className="w-48 p-3 bg-[#053528] text-white rounded-xl text-right text-xl font-black shadow-lg"
-            />
+            <div className="flex justify-between">
+              <span>Commission</span>
+              <input
+                type="number"
+                value={commission}
+                onChange={(e) => setCommission(parseFloat(e.target.value) || 0)}
+                className="w-24 text-right border rounded px-2"
+              />
+            </div>
+
+            <div className="flex justify-between font-black text-lg">
+              <span>Grand Total</span>
+              <span>৳ {totals.grandTotal.toLocaleString()}</span>
+            </div>
           </div>
         </div>
 
-        <div className="mt-10 flex justify-center">
+        {/* SUBMIT */}
+        <div className="mt-5 flex justify-center">
           <button
             type="submit"
-            className="flex items-center gap-3 px-12 py-4 bg-[#053528] text-white rounded-2xl font-bold hover:scale-105 transition-all shadow-xl shadow-green-900/20"
+            className="px-16 py-4 bg-[#053528] text-white rounded-2xl font-black flex gap-5 justify-center items-center"
           >
-            <Send size={20} /> Submit Inventory
+            <Send size={20} /> Save Inventory
           </button>
         </div>
       </form>

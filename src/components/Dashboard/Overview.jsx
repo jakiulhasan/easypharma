@@ -120,7 +120,7 @@ const Overview = () => {
             <div className="grid grid-cols-3 gap-4">
               {/* Add Medicine */}
               <Link
-                to="/dashboard/sales"
+                to="/dashboard/add-medicine"
                 className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex flex-col items-center justify-center cursor-pointer hover:border-green-500 transition-all group"
               >
                 <div className="w-12 h-12 bg-green-50 text-green-600 rounded-full flex items-center justify-center mb-3 group-hover:bg-green-600 group-hover:text-white transition-all">
