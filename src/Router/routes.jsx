@@ -8,10 +8,10 @@ import Dashboard from "../pages/Dashboard";
 import Overview from "../components/Dashboard/Overview";
 import Sales from "../components/Dashboard/sales/Sales";
 import AddMedicine from "../components/Dashboard/Add-Medicine/AddMedicine";
-import Inventory from "../components/Dashboard/Inventory/inventory";
 import Wishlist from "../components/Dashboard/Wishlist/Wishlist";
 import Expired from "../components/Dashboard/Expired/Expired";
 import Settings from "../components/Dashboard/Settings/Settings";
+import InventoryView from "../components/Dashboard/Inventory/InventoryView";
 
 const routes = createBrowserRouter([
   {
@@ -52,7 +52,7 @@ const routes = createBrowserRouter([
           },
           {
             path: "inventory",
-            Component: Inventory,
+            Component: InventoryView,
           },
           {
             path: "wishlist",

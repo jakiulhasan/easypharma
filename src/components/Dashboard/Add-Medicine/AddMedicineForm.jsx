@@ -1,13 +1,16 @@
 import React, { useState, useEffect, useContext, useRef } from "react";
 import { Plus, Trash2, Send, MapPin, Search, X } from "lucide-react";
 import { AuthContext } from "../../../context/auth/AuthContext";
+import axios from "axios";
+
+const API_BASE_URL = "http://localhost:4242/api";
 
 const AddMedicineForm = () => {
   const { user } = useContext(AuthContext);
 
   const [medicines, setMedicines] = useState([
     {
-      id: 1,
+      id: Date.now(),
       user: user?.email || "",
       type: "Tablet",
       name: "",
@@ -23,13 +26,14 @@ const AddMedicineForm = () => {
 
   const [commission, setCommission] = useState(0);
   const [totals, setTotals] = useState({ subTotal: 0, grandTotal: 0 });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Search related states
-  const [searchQuery, setSearchQuery] = useState({}); // { rowIndex: query }
-  const [suggestions, setSuggestions] = useState({}); // { rowIndex: [] }
-  const [isLoading, setIsLoading] = useState({}); // { rowIndex: boolean }
-  const [activeSuggestionIndex, setActiveSuggestionIndex] = useState({}); // For keyboard navigation
-  const [showAddNewOption, setShowAddNewOption] = useState({}); // { rowIndex: boolean }
+  const [searchQuery, setSearchQuery] = useState({});
+  const [suggestions, setSuggestions] = useState({});
+  const [isLoading, setIsLoading] = useState({});
+  const [activeSuggestionIndex, setActiveSuggestionIndex] = useState({});
+  const [showAddNewOption, setShowAddNewOption] = useState({});
 
   const searchTimeoutRef = useRef({});
   const suggestionRefs = useRef({});
@@ -37,22 +41,17 @@ const AddMedicineForm = () => {
   // Function to generate a unique 5-digit ID
   const generateUniqueId = async () => {
     try {
-      // Fetch all existing medicine IDs from the database
-      const response = await fetch(
-        `http://localhost:4242/api/medicines/all-ids`,
-      );
-      const existingIds = await response.json();
+      const response = await axios.get(`${API_BASE_URL}/medicines/all-ids`);
+      const existingIds = response.data;
 
       let newId;
       do {
-        // Generate random 5-digit number (10000 to 99999)
         newId = Math.floor(10000 + Math.random() * 90000).toString();
       } while (existingIds.includes(newId));
 
       return newId;
     } catch (error) {
       console.error("Error generating unique ID:", error);
-      // Fallback: generate without checking existing IDs
       return Math.floor(10000 + Math.random() * 90000).toString();
     }
   };
@@ -78,15 +77,13 @@ const AddMedicineForm = () => {
     setIsLoading((prev) => ({ ...prev, [rowIndex]: true }));
 
     try {
-      // API call to your backend
-      const response = await fetch(
-        `http://localhost:4242/api/medicines/search?q=${encodeURIComponent(query)}`,
-      );
-      const data = await response.json();
+      const response = await axios.get(`${API_BASE_URL}/medicines/search`, {
+        params: { q: query },
+      });
+      const data = response.data;
 
       setSuggestions((prev) => ({ ...prev, [rowIndex]: data }));
 
-      // Check if the typed name matches any existing medicine
       const exactMatch = data.some(
         (medicine) => medicine.name.toLowerCase() === query.toLowerCase(),
       );
@@ -111,45 +108,38 @@ const AddMedicineForm = () => {
     try {
       const uniqueId = await generateUniqueId();
 
-      // Create new medicine object
       const newMedicine = {
         id: uniqueId,
         name: medicineName,
         type: medicines[index].type || "Tablet",
-        // Add other default fields as needed
       };
 
-      // API call to save the new medicine to database
-      const response = await fetch(`http://localhost:4242/api/medicines`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(newMedicine),
-      });
+      const response = await axios.post(
+        `${API_BASE_URL}/medicines`,
+        newMedicine,
+      );
 
-      if (response.ok) {
-        const savedMedicine = await response.json();
+      if (response.data) {
+        const savedMedicine = response.data;
 
-        // Update the form with the new medicine
         handleInputChange(index, "name", savedMedicine.name);
         handleInputChange(index, "code", savedMedicine.id);
 
-        // Clear suggestions
         setSuggestions((prev) => ({ ...prev, [index]: [] }));
         setShowAddNewOption((prev) => ({ ...prev, [index]: false }));
         setSearchQuery((prev) => ({ ...prev, [index]: savedMedicine.name }));
 
-        // Show success message (optional)
+        // Show success message
         alert(
           `New medicine "${savedMedicine.name}" added with ID: ${savedMedicine.id}`,
         );
-      } else {
-        throw new Error("Failed to save medicine");
       }
     } catch (error) {
       console.error("Error adding new medicine:", error);
-      alert("Failed to add new medicine. Please try again.");
+      alert(
+        error.response?.data?.error ||
+          "Failed to add new medicine. Please try again.",
+      );
     } finally {
       setIsLoading((prev) => ({ ...prev, [index]: false }));
     }
@@ -157,18 +147,13 @@ const AddMedicineForm = () => {
 
   // Debounced search handler
   const handleNameSearch = (index, value) => {
-    // Update the name field
     handleInputChange(index, "name", value);
-
-    // Update search query state
     setSearchQuery((prev) => ({ ...prev, [index]: value }));
 
-    // Clear existing timeout
     if (searchTimeoutRef.current[index]) {
       clearTimeout(searchTimeoutRef.current[index]);
     }
 
-    // Set new timeout for debouncing
     searchTimeoutRef.current[index] = setTimeout(() => {
       searchMedicines(value, index);
     }, 300);
@@ -176,12 +161,24 @@ const AddMedicineForm = () => {
 
   // Select medicine from suggestions
   const selectMedicine = (index, medicine) => {
-    // Update name
-    handleInputChange(index, "name", medicine.name);
-    // Update code with id
-    handleInputChange(index, "code", medicine.id.toString());
+    const updatedMedicines = medicines.map((item, i) => {
+      if (i !== index) return item;
 
-    // Clear suggestions and search query
+      const updatedItem = {
+        ...item,
+        name: medicine.name,
+        code: medicine.id.toString(),
+      };
+
+      // Recalculate totalBuy if quantity and buyPrice exist
+      if (updatedItem.quantity && updatedItem.buyPrice) {
+        updatedItem.totalBuy = updatedItem.quantity * updatedItem.buyPrice;
+      }
+
+      return updatedItem;
+    });
+
+    setMedicines(updatedMedicines);
     setSuggestions((prev) => ({ ...prev, [index]: [] }));
     setShowAddNewOption((prev) => ({ ...prev, [index]: false }));
     setSearchQuery((prev) => ({ ...prev, [index]: medicine.name }));
@@ -215,10 +212,8 @@ const AddMedicineForm = () => {
         showAddNew &&
         activeSuggestionIndex[index] === suggestionList.length
       ) {
-        // "Add new" option is selected
         addNewMedicine(index, searchQuery[index]);
       } else if (activeSuggestionIndex[index] < suggestionList.length) {
-        // Regular medicine is selected
         selectMedicine(index, suggestionList[activeSuggestionIndex[index]]);
       }
     } else if (e.key === "Escape") {
@@ -267,7 +262,6 @@ const AddMedicineForm = () => {
   const removeRow = (index) => {
     if (medicines.length > 1) {
       setMedicines(medicines.filter((_, i) => i !== index));
-      // Clean up search states for removed row
       setSuggestions((prev) => {
         const newState = { ...prev };
         delete newState[index];
@@ -283,6 +277,134 @@ const AddMedicineForm = () => {
         delete newState[index];
         return newState;
       });
+    }
+  };
+
+  // Handle form submission
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    // Validate at least one medicine is added
+    const validMedicines = medicines.filter(
+      (med) => med.name && med.quantity > 0,
+    );
+    if (validMedicines.length === 0) {
+      alert("Please add at least one medicine with valid name and quantity");
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      // Prepare inventory items and buy history items
+      const inventoryItems = [];
+      const buyHistoryItems = [];
+      const currentDate = new Date();
+
+      for (const medicine of medicines) {
+        if (!medicine.name || medicine.quantity === 0) continue;
+
+        // Check if medicine exists in medicine_list to get the ID
+        let medicineId = medicine.code;
+
+        if (!medicineId) {
+          // Search for the medicine to get its ID
+          const searchResponse = await axios.get(
+            `${API_BASE_URL}/medicines/search`,
+            {
+              params: { q: medicine.name },
+            },
+          );
+
+          if (searchResponse.data.length > 0) {
+            medicineId = searchResponse.data[0].id;
+          } else {
+            // Create new medicine if not found
+            const newMedicineResponse = await axios.post(
+              `${API_BASE_URL}/medicines`,
+              {
+                name: medicine.name,
+                type: medicine.type,
+                id: await generateUniqueId(),
+              },
+            );
+            medicineId = newMedicineResponse.data.id;
+          }
+        }
+
+        // Prepare inventory item
+        inventoryItems.push({
+          medicineId: medicineId,
+          medicineName: medicine.name,
+          type: medicine.type,
+          quantity: medicine.quantity,
+          buyPrice: medicine.buyPrice,
+          sellPrice: medicine.sellPrice,
+          expiry: medicine.expiry,
+          location: medicine.location,
+          user: user?.email,
+          createdAt: currentDate,
+          updatedAt: currentDate,
+        });
+
+        // Prepare buy history item
+        buyHistoryItems.push({
+          medicineId: medicineId,
+          medicineName: medicine.name,
+          quantity: medicine.quantity,
+          buyPrice: medicine.buyPrice,
+          totalPrice: medicine.quantity * medicine.buyPrice,
+          expiry: medicine.expiry,
+          location: medicine.location,
+          user: user?.email,
+          purchaseDate: currentDate,
+          commission: commission,
+          grandTotal: totals.grandTotal,
+        });
+      }
+
+      // Submit inventory and buy history
+      const response = await axios.post(`${API_BASE_URL}/inventory/bulk-add`, {
+        inventoryItems,
+        buyHistoryItems,
+        user: user?.email,
+        commission,
+        subTotal: totals.subTotal,
+        grandTotal: totals.grandTotal,
+        purchaseDate: currentDate,
+      });
+
+      if (response.data.success) {
+        alert(
+          `Successfully added ${response.data.inventoryCount} items to inventory and ${response.data.buyHistoryCount} items to buy history!`,
+        );
+
+        // Reset form
+        setMedicines([
+          {
+            id: Date.now(),
+            user: user?.email || "",
+            type: "Tablet",
+            name: "",
+            code: "",
+            expiry: "",
+            quantity: 0,
+            buyPrice: 0,
+            sellPrice: 0,
+            location: "",
+            totalBuy: 0,
+          },
+        ]);
+        setCommission(0);
+      }
+    } catch (error) {
+      console.error("Error submitting form:", error);
+      alert(
+        error.response?.data?.error ||
+          "Failed to save inventory. Please try again.",
+      );
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -311,9 +433,9 @@ const AddMedicineForm = () => {
         Update Stock Inventory
       </h2>
 
-      <form onSubmit={(e) => e.preventDefault()}>
-        <div className=" rounded-xl border border-gray-100">
-          <table className="w-full text-left border-collapse">
+      <form onSubmit={handleSubmit}>
+        <div className="rounded-xl border border-gray-100">
+          <table className="w-full text-left border-collapse min-w-[1000px]">
             <thead className="bg-gray-50">
               <tr className="text-[11px] font-black text-gray-500 uppercase tracking-widest border-b border-gray-100">
                 <th className="p-4 w-12 text-center">SL</th>
@@ -321,7 +443,7 @@ const AddMedicineForm = () => {
                 <th className="p-4 min-w-[200px]">Medicine Name</th>
                 <th className="p-4 w-28">Code</th>
                 <th className="p-4 w-36">Expiry</th>
-                <th className="p-4 w-20 text-center">QTYY</th>
+                <th className="p-4 w-20 text-center">QTY</th>
                 <th className="p-4 w-28 text-right">Buy (৳)</th>
                 <th className="p-4 w-28 text-right">Sell (৳)</th>
                 <th className="p-4 w-32">Location</th>
@@ -333,12 +455,10 @@ const AddMedicineForm = () => {
             <tbody className="divide-y divide-gray-50">
               {medicines.map((med, index) => (
                 <tr key={med.id} className="hover:bg-gray-50/50 transition-all">
-                  {/* SL */}
                   <td className="p-1 text-center text-xs font-bold text-gray-400">
                     {index + 1}
                   </td>
 
-                  {/* TYPE */}
                   <td className="p-1">
                     <select
                       value={med.type}
@@ -354,7 +474,6 @@ const AddMedicineForm = () => {
                     </select>
                   </td>
 
-                  {/* NAME - WITH SEARCH - z-index fix */}
                   <td
                     className="p-1 relative"
                     ref={(el) => (suggestionRefs.current[index] = el)}
@@ -376,6 +495,7 @@ const AddMedicineForm = () => {
                           className="w-full p-2.5 pr-8 border border-gray-200 rounded-xl text-sm focus:ring-2 ring-green-500/20 outline-none"
                           placeholder="Search medicine..."
                           autoComplete="off"
+                          required
                         />
                         {isLoading[index] ? (
                           <div className="absolute right-3 top-1/2 -translate-y-1/2">
@@ -389,14 +509,12 @@ const AddMedicineForm = () => {
                         )}
                       </div>
 
-                      {/* SUGGESTIONS DROPDOWN - HIGH Z-INDEX */}
                       {(suggestions[index]?.length > 0 ||
                         showAddNewOption[index]) && (
                         <div
                           className="absolute z-[9999] w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-2xl max-h-60 overflow-y-auto"
                           style={{ zIndex: 9999 }}
                         >
-                          {/* Existing medicine suggestions */}
                           {suggestions[index]?.map((medicine, sIndex) => (
                             <div
                               key={medicine._id}
@@ -416,7 +534,6 @@ const AddMedicineForm = () => {
                             </div>
                           ))}
 
-                          {/* Add new medicine option */}
                           {showAddNewOption[index] && (
                             <div
                               onClick={() =>
@@ -447,7 +564,6 @@ const AddMedicineForm = () => {
                     </div>
                   </td>
 
-                  {/* CODE */}
                   <td className="p-1">
                     <input
                       type="text"
@@ -457,11 +573,10 @@ const AddMedicineForm = () => {
                       }
                       className="w-full p-2.5 border border-gray-200 rounded-xl text-sm outline-none focus:border-green-500 bg-gray-50"
                       placeholder="Code"
-                      readOnly={false}
+                      readOnly
                     />
                   </td>
 
-                  {/* EXPIRY */}
                   <td className="p-1">
                     <input
                       type="date"
@@ -473,7 +588,6 @@ const AddMedicineForm = () => {
                     />
                   </td>
 
-                  {/* QUANTITY */}
                   <td className="p-1">
                     <input
                       type="number"
@@ -486,10 +600,10 @@ const AddMedicineForm = () => {
                         )
                       }
                       className="w-full p-2.5 border border-gray-200 rounded-xl text-sm font-bold text-center outline-none"
+                      required
                     />
                   </td>
 
-                  {/* BUY */}
                   <td className="p-1">
                     <input
                       type="number"
@@ -502,10 +616,10 @@ const AddMedicineForm = () => {
                         )
                       }
                       className="w-full p-2.5 border border-gray-200 rounded-xl text-sm text-right outline-none"
+                      required
                     />
                   </td>
 
-                  {/* SELL */}
                   <td className="p-1">
                     <input
                       type="number"
@@ -518,10 +632,10 @@ const AddMedicineForm = () => {
                         )
                       }
                       className="w-full p-2.5 border border-gray-200 rounded-xl text-sm text-right outline-none"
+                      required
                     />
                   </td>
 
-                  {/* LOCATION */}
                   <td className="p-1">
                     <div className="flex items-center gap-1.5 bg-white px-2 py-2.5 rounded-lg border border-gray-100">
                       <MapPin size={14} className="text-gray-400" />
@@ -537,17 +651,15 @@ const AddMedicineForm = () => {
                     </div>
                   </td>
 
-                  {/* TOTAL */}
                   <td className="p-1 text-right font-black">
                     ৳ {med.totalBuy.toLocaleString()}
                   </td>
 
-                  {/* ACTION */}
                   <td className="p-1 text-center">
                     <button
                       type="button"
                       onClick={() => removeRow(index)}
-                      className="text-gray-300 hover:text-red-500"
+                      className="text-gray-300 hover:text-red-500 transition-colors"
                     >
                       <Trash2 size={18} />
                     </button>
@@ -558,13 +670,12 @@ const AddMedicineForm = () => {
           </table>
         </div>
 
-        {/* FOOTER */}
-        <div className="mt-8 flex justify-between">
+        <div className="mt-8 flex justify-between flex-wrap gap-4">
           <div>
             <button
               type="button"
               onClick={addMoreRow}
-              className="flex items-center gap-2 px-6 py-3 bg-green-50 text-green-700 rounded-2xl font-bold cursor-pointer"
+              className="flex items-center gap-2 px-6 py-3 bg-green-50 text-green-700 rounded-2xl font-bold cursor-pointer hover:bg-green-100 transition-colors"
             >
               <Plus size={20} /> Add New Medicine
             </button>
@@ -572,34 +683,43 @@ const AddMedicineForm = () => {
 
           <div className="w-96 p-6 bg-gray-50 rounded-3xl space-y-3">
             <div className="flex justify-between">
-              <span>Sub Total</span>
-              <span>৳ {totals.subTotal.toFixed(2)}</span>
+              <span className="font-medium">Sub Total</span>
+              <span className="font-bold">৳ {totals.subTotal.toFixed(2)}</span>
             </div>
 
-            <div className="flex justify-between">
-              <span>Commission</span>
+            <div className="flex justify-between items-center">
+              <span className="font-medium">Commission</span>
               <input
                 type="number"
                 value={commission}
                 onChange={(e) => setCommission(parseFloat(e.target.value) || 0)}
-                className="w-24 text-right border rounded px-2"
+                className="w-24 text-right border rounded-lg px-2 py-1 outline-none focus:border-green-500"
               />
             </div>
 
-            <div className="flex justify-between font-black text-lg">
+            <div className="flex justify-between font-black text-lg pt-2 border-t border-gray-200">
               <span>Grand Total</span>
               <span>৳ {totals.grandTotal.toLocaleString()}</span>
             </div>
           </div>
         </div>
 
-        {/* SUBMIT */}
         <div className="mt-5 flex justify-center">
           <button
             type="submit"
-            className="px-16 py-4 bg-[#053528] text-white rounded-2xl font-black flex gap-5 justify-center items-center"
+            disabled={isSubmitting}
+            className="px-16 py-4 bg-[#053528] text-white rounded-2xl font-black flex gap-5 justify-center items-center hover:bg-[#0a4a3a] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <Send size={20} /> Save Inventory
+            {isSubmitting ? (
+              <>
+                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                Saving...
+              </>
+            ) : (
+              <>
+                <Send size={20} /> Save Inventory
+              </>
+            )}
           </button>
         </div>
       </form>
