@@ -11,7 +11,7 @@ import {
 import { AuthContext } from "../../../context/auth/AuthContext";
 import axios from "axios";
 
-const API_BASE_URL = "http://localhost:4242/api";
+const API_BASE_URL = "https://easypharma-backend.vercel.app/api";
 
 const InventoryView = () => {
   const { user } = useContext(AuthContext);
@@ -25,11 +25,20 @@ const InventoryView = () => {
   const [editData, setEditData] = useState(null);
   const [updating, setUpdating] = useState(false);
 
-  // Fetch all inventory items
+  // Fetch inventory items for logged-in user
   const fetchInventory = async () => {
+    if (!user?.email) {
+      console.error("No user email found");
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     try {
-      const response = await axios.get(`${API_BASE_URL}/inventory/all`);
+      // Fetch inventory filtered by user email
+      const response = await axios.get(
+        `${API_BASE_URL}/inventory/user/${user.email}`,
+      );
       setInventory(response.data);
       setFilteredInventory(response.data);
     } catch (error) {
@@ -41,8 +50,10 @@ const InventoryView = () => {
   };
 
   useEffect(() => {
-    fetchInventory();
-  }, []);
+    if (user?.email) {
+      fetchInventory();
+    }
+  }, [user?.email]);
 
   // Search functionality
   useEffect(() => {
@@ -76,6 +87,11 @@ const InventoryView = () => {
 
   // Update medicine
   const handleUpdate = async () => {
+    if (!user?.email) {
+      alert("User not authenticated");
+      return;
+    }
+
     setUpdating(true);
     try {
       const response = await axios.put(
@@ -87,6 +103,7 @@ const InventoryView = () => {
           expiry: editData.expiry,
           location: editData.location,
           type: editData.type,
+          userEmail: user.email, // Send user email to verify ownership
         },
       );
 
@@ -99,7 +116,10 @@ const InventoryView = () => {
       }
     } catch (error) {
       console.error("Error updating medicine:", error);
-      alert("Failed to update medicine. Please try again.");
+      alert(
+        error.response?.data?.message ||
+          "Failed to update medicine. Please try again.",
+      );
     } finally {
       setUpdating(false);
     }
@@ -107,20 +127,30 @@ const InventoryView = () => {
 
   // Delete medicine
   const handleDelete = async (id, medicineName) => {
+    if (!user?.email) {
+      alert("User not authenticated");
+      return;
+    }
+
     if (
       window.confirm(
         `Are you sure you want to delete "${medicineName}" from inventory?`,
       )
     ) {
       try {
-        const response = await axios.delete(`${API_BASE_URL}/inventory/${id}`);
+        const response = await axios.delete(`${API_BASE_URL}/inventory/${id}`, {
+          data: { userEmail: user.email },
+        });
         if (response.data.success) {
           alert("Medicine deleted successfully!");
           fetchInventory();
         }
       } catch (error) {
         console.error("Error deleting medicine:", error);
-        alert("Failed to delete medicine. Please try again.");
+        alert(
+          error.response?.data?.message ||
+            "Failed to delete medicine. Please try again.",
+        );
       }
     }
   };
@@ -148,7 +178,7 @@ const InventoryView = () => {
     return new Date(date).toLocaleDateString("bn-BD");
   };
 
-  // Calculate total stock value
+  // Calculate total stock value (only for user's inventory)
   const totalStockValue = inventory.reduce(
     (sum, item) => sum + item.quantity * item.buyPrice,
     0,
@@ -160,17 +190,34 @@ const InventoryView = () => {
   // Unique medicine types
   const uniqueTypes = [...new Set(inventory.map((item) => item.type))];
 
+  // Show loading if no user
+  if (!user?.email) {
+    return (
+      <div className="bg-white p-6 rounded-3xl shadow-xl border border-gray-100 mx-auto my-10">
+        <div className="text-center py-20">
+          <AlertCircle size={64} className="mx-auto text-red-300 mb-4" />
+          <p className="text-gray-500">Please login to view inventory</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="bg-white p-6 rounded-3xl shadow-xl border border-gray-100 mx-auto my-10">
       {/* Header */}
       <div className="flex justify-between items-center mb-8 flex-wrap gap-4">
-        <h2 className="text-2xl font-black text-gray-800 flex items-center gap-2">
-          <Package
-            className="bg-[#053528] text-white rounded-lg p-1.5"
-            size={32}
-          />
-          Inventory Management
-        </h2>
+        <div>
+          <h2 className="text-2xl font-black text-gray-800 flex items-center gap-2">
+            <Package
+              className="bg-[#053528] text-white rounded-lg p-1.5"
+              size={32}
+            />
+            Inventory Management
+          </h2>
+          <p className="text-sm text-gray-500 mt-1">
+            Showing inventory for: {user.email}
+          </p>
+        </div>
 
         <button
           onClick={fetchInventory}
@@ -368,7 +415,7 @@ const InventoryView = () => {
         </div>
       )}
 
-      {/* View/Edit Modal */}
+      {/* View/Edit Modal - Same as before */}
       {showModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">

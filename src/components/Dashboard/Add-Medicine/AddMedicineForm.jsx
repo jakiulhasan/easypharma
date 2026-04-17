@@ -3,7 +3,7 @@ import { Plus, Trash2, Send, MapPin, Search, X } from "lucide-react";
 import { AuthContext } from "../../../context/auth/AuthContext";
 import axios from "axios";
 
-const API_BASE_URL = "http://localhost:4242/api";
+const API_BASE_URL = "https://easypharma-backend.vercel.app/api";
 
 const AddMedicineForm = () => {
   const { user } = useContext(AuthContext);
@@ -471,6 +471,14 @@ const AddMedicineForm = () => {
                       <option value="Syrup">Syrup</option>
                       <option value="Injection">Injection</option>
                       <option value="Insulin">Insulin</option>
+                      <option value="P/D">P/D</option>
+                      <option value="Capsul">Capsul</option>
+                      <option value="E/d">E/d</option>
+                      <option value="Pot">Pot</option>
+                      <option value="Ointment">Ointment</option>
+                      <option value="Cream">Cream</option>
+                      <option value="Suspension">Suspension</option>
+                      <option value="Selain">Selain</option>
                     </select>
                   </td>
 
